@@ -103,7 +103,6 @@
     .gameover-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
     .btn-restart { width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 12px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; }
     
-    /* 🌐 구글 실시간 검색 바로가기 카드 스타일 */
     .google-live-card {
       background: rgba(79, 70, 229, 0.15);
       border: 1px solid var(--primary-light);
@@ -128,11 +127,8 @@
       display: inline-block;
       box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
     }
-    .btn-google-translate:hover {
-      background: var(--primary-light);
-    }
+    .btn-google-translate:hover { background: var(--primary-light); }
 
-    /* 데이터 검사 리포트 스타일 */
     .inspect-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
     .inspect-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 5px; }
     .inspect-label { color: #cbd5e1; }
@@ -268,7 +264,7 @@
             <span class="inspect-val" id="inspTotalCount">0개</span>
           </div>
           <div class="inspect-row">
-            <span class="inspect-label">일반 어휘 (1~1000번 대상)</span>
+            <span class="inspect-label">일반 어휘 (동사/형용사/숫자)</span>
             <span class="inspect-val" id="inspGeneralCount">0개</span>
           </div>
           <div class="inspect-row">
@@ -276,12 +272,12 @@
             <span class="inspect-val" id="inspBibleCount">0개</span>
           </div>
           <div class="inspect-row">
-            <span class="inspect-label">10단위 숫자 등록 상태 (10~1,000,000)</span>
-            <span class="inspect-val" id="inspNumberStatus">정상 등록됨 (17개)</span>
+            <span class="inspect-label">10단위 숫자 등록 상태</span>
+            <span class="inspect-val" id="inspNumberStatus">10부터 100만까지 17개 등록</span>
           </div>
           <div class="inspect-row">
             <span class="inspect-label">워드 파일(.docx) 연동 상태</span>
-            <span class="inspect-val" id="inspDocxStatus">기본 데이터 작동 중</span>
+            <span class="inspect-val" id="inspDocxStatus">확인 중...</span>
           </div>
           <div class="inspect-row">
             <span class="inspect-label">사운드 엔진 상태</span>
@@ -360,7 +356,7 @@
 
   <script>
     /* ==========================================================================
-       1. 10단위 숫자 어휘군 (10부터 1,000,000까지 영구 보존)
+       1. 10단위 숫자 어휘군 (10부터 1,000,000까지)
        ========================================================================== */
     const NUMBER_WORDS = [
       { id: 980, khmer: "ដប់", pron: "덥", meaning: "10 (열 / 십)", type: "숫자" },
@@ -538,7 +534,7 @@
     }
 
     /* ==========================================================================
-       2. Web Audio API 사운드
+       2. Web Audio API 사운드 (iOS Safari 완전 호환)
        ========================================================================== */
     let audioCtx = null;
     function getAudioContext() {
@@ -652,7 +648,8 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = confettiParticles.length - 1; i >= 0; i--) {
         const p = confettiParticles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += 0.38; p.vx *= 0.98;
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.38; p.vx *= 0.98;
         p.rotation += p.rotSpeed; p.opacity -= p.decay;
         if (p.opacity <= 0 || p.y > canvas.height) { confettiParticles.splice(i, 1); continue; }
         ctx.save();
@@ -668,7 +665,7 @@
     }
 
     /* ==========================================================================
-       4. 발음 오디오 엔진
+       4. 발음 오디오 엔진 (Google TTS + Web Speech 안전 대체)
        ========================================================================== */
     let audioMode = 'khmer';
     let currentAudioObj = null;
@@ -745,7 +742,7 @@
     }
 
     /* ==========================================================================
-       5. 퀴즈 엔진 & 선지 분리 & 5개 생명 시스템
+       5. 퀴즈 엔진 & ★ 선지 완벽 분리(동사/형용사/성경/숫자 격리)
        ========================================================================== */
     const MAX_LIVES = 5;
     let currentLives = 5;
@@ -842,7 +839,7 @@
       if (currentLives <= 0) return;
 
       if (currentIndex >= questionPool.length) {
-        alert('🎉 축하합니다! 이 모드의 1,000문제를 모두 완주하셨습니다!');
+        alert('🎉 축하합니다! 이 모드의 문제를 모두 완주하셨습니다!');
         currentIndex = 0;
         questionPool = shuffle(questionPool);
       }
@@ -850,21 +847,48 @@
       isAnswered = false;
       const targetWord = questionPool[currentIndex];
 
-      // 선지 엄격 분리 (일반 vs 성경)
-      const isBible = (currentMode === 'bible' || targetWord.id >= 1001);
-      let candidatePool;
+      // ★ 사지선다 선지 완벽 분리 알고리즘:
+      // 1. 성경 문제 -> 오직 성경 어휘(1001~2000)에서만 선지 추출
+      // 2. 동사 문제 -> 오직 동사(1~600)에서만 선지 추출
+      // 3. 형용사 문제 -> 오직 형용사(601~1000)에서만 선지 추출
+      // 4. 숫자 문제 -> 오직 숫자에서만 선지 추출
+      let candidatePool = [];
 
-      if (isBible) {
-        candidatePool = ALL_WORDS_DATABASE.filter(w => w.id >= 1001 && w.meaning !== targetWord.meaning);
+      if (targetWord.id >= 1001 || targetWord.type === '성경') {
+        candidatePool = ALL_WORDS_DATABASE.filter(w => (w.id >= 1001 || w.type === '성경') && w.meaning !== targetWord.meaning);
+      } else if (targetWord.type === '동사' || (targetWord.id >= 1 && targetWord.id <= 600)) {
+        candidatePool = ALL_WORDS_DATABASE.filter(w => (w.type === '동사' || (w.id >= 1 && w.id <= 600)) && w.meaning !== targetWord.meaning);
+      } else if (targetWord.type === '형용사' || (targetWord.id > 600 && targetWord.id <= 1000 && targetWord.type !== '숫자')) {
+        candidatePool = ALL_WORDS_DATABASE.filter(w => (w.type === '형용사' || (w.id > 600 && w.id <= 1000 && w.type !== '숫자')) && w.meaning !== targetWord.meaning);
+      } else if (targetWord.type === '숫자') {
+        candidatePool = ALL_WORDS_DATABASE.filter(w => w.type === '숫자' && w.meaning !== targetWord.meaning);
       } else {
-        const generalPool = ALL_WORDS_DATABASE.filter(w => w.id <= 1000 && w.meaning !== targetWord.meaning);
-        const sameType = generalPool.filter(w => w.type === targetWord.type);
-        candidatePool = (sameType.length >= 3) ? sameType : generalPool;
+        candidatePool = ALL_WORDS_DATABASE.filter(w => w.type === targetWord.type && w.meaning !== targetWord.meaning);
       }
 
-      const chosenDistractors = shuffle(candidatePool).slice(0, 3);
-      const options = shuffle([targetWord, ...chosenDistractors]);
+      // 보기 간 뜻 중복 방지 및 고유 3개 오답 선지 추출
+      const chosenDistractors = [];
+      const usedMeanings = new Set([targetWord.meaning]);
+      const shuffledCandidates = shuffle(candidatePool);
 
+      for (const cand of shuffledCandidates) {
+        if (!usedMeanings.has(cand.meaning)) {
+          usedMeanings.add(cand.meaning);
+          chosenDistractors.push(cand);
+          if (chosenDistractors.length === 3) break;
+        }
+      }
+
+      // 후보가 극히 부족할 경우 대비 안전 폴백
+      if (chosenDistractors.length < 3) {
+        for (const cand of shuffledCandidates) {
+          if (chosenDistractors.length < 3 && cand.id !== targetWord.id) {
+            chosenDistractors.push(cand);
+          }
+        }
+      }
+
+      const options = shuffle([targetWord, ...chosenDistractors]);
       currentQuestion = { target: targetWord, options: options };
       renderQuestionCard();
     }
@@ -977,7 +1001,6 @@
         card.classList.add('shake');
         setTimeout(() => card.classList.remove('shake'), 450);
 
-        // 5개 목숨 소진 시 게임 오버
         if (currentLives <= 0) {
           setTimeout(() => {
             document.getElementById('goScore').textContent = correctCount;
@@ -1092,7 +1115,7 @@
       comboCount = 0;
       document.getElementById('gameOverModal').classList.remove('open');
       initQuizPool();
-      showToast('💖 생명이 5개로 완충되었습니다! 힘내세요!');
+      showToast('💖 생명이 5개로 완충되었습니다! 다시 도전해보세요!');
     }
 
     /* ==========================================================================
@@ -1106,9 +1129,9 @@
 
       document.getElementById('inspTotalCount').textContent = `${total}개 단어`;
       document.getElementById('inspGeneralCount').textContent = `${general}개 (동사/형용사/숫자)`;
-      document.getElementById('inspBibleCount').textContent = `${bible}개 (성경 핵심 어휘)`;
-      document.getElementById('inspNumberStatus').textContent = `10단위 17개 완벽 등록됨 (10~1,000,000)`;
-      document.getElementById('inspDocxStatus').textContent = hasCustom ? "워드 파일 등록 완료 (영구 보존 중)" : "내장 기본 데이터 구동 중 (상단 📂 워드 등록 버튼으로 업로드 가능)";
+      document.getElementById('inspBibleCount').textContent = `${bible}개 (성경 어휘)`;
+      document.getElementById('inspNumberStatus').textContent = `10부터 100만까지 17개 등록 완료`;
+      document.getElementById('inspDocxStatus').textContent = hasCustom ? "워드 파일 등록 완료 (영구 보존 중)" : "내장 기본 데이터 구동 중 (📂 워드 등록 가능)";
       document.getElementById('inspAudioStatus').textContent = (audioCtx && audioCtx.state !== 'closed') ? "정상 활성화됨" : "대기 중 (클릭 시 자동 활성)";
 
       document.getElementById('inspectModal').classList.add('open');
@@ -1149,6 +1172,7 @@
             });
 
             if (parsedWords.length > 50) {
+              // 10단위 숫자 자동 병합 (10~1,000,000)
               NUMBER_WORDS.forEach(num => {
                 if (!parsedWords.some(w => w.khmer === num.khmer)) {
                   parsedWords.push(num);
@@ -1255,7 +1279,7 @@
         container.appendChild(row);
       });
 
-      // 검색어가 있을 경우 리스트 맨 아래에도 구글 번역 추가 검색 링크 배치
+      // 검색어가 있을 경우 리스트 하단에 구글 번역 추가 검색 링크 배치
       if (query) {
         const isKhmer = /[\u1780-\u17FF]/.test(query);
         const googleUrl = `https://translate.google.com/?sl=${isKhmer ? 'km' : 'ko'}&tl=${isKhmer ? 'ko' : 'km'}&text=${encodeURIComponent(query)}&op=translate`;
