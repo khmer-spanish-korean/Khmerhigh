@@ -103,7 +103,36 @@
     .gameover-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
     .btn-restart { width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 12px; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; }
     
-    /* 데이터 검사 리포트 전용 스타일 */
+    /* 🌐 구글 실시간 검색 바로가기 카드 스타일 */
+    .google-live-card {
+      background: rgba(79, 70, 229, 0.15);
+      border: 1px solid var(--primary-light);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .btn-google-translate {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border: none;
+      color: #fff;
+      padding: 11px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+    .btn-google-translate:hover {
+      background: var(--primary-light);
+    }
+
+    /* 데이터 검사 리포트 스타일 */
     .inspect-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
     .inspect-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 5px; }
     .inspect-label { color: #cbd5e1; }
@@ -353,7 +382,7 @@
       { id: 996, khmer: "មួយលាន", pron: "믕리언", meaning: "1,000,000 (백만)", type: "숫자" }
     ];
 
-    /* 기본 내장 단어 DB (워드 파일 업로드 시 자동 대체/확장됨) */
+    /* 기본 내장 단어 DB */
     let ALL_WORDS_DATABASE = [
       { id: 1, khmer: "ជា", pron: "찌어", meaning: "~이다", type: "동사" },
       { id: 2, khmer: "មាន", pron: "미언", meaning: "있다, 가지다", type: "동사" },
@@ -509,7 +538,7 @@
     }
 
     /* ==========================================================================
-       2. Web Audio API 사운드 (iOS Safari 안전 호환)
+       2. Web Audio API 사운드
        ========================================================================== */
     let audioCtx = null;
     function getAudioContext() {
@@ -639,7 +668,7 @@
     }
 
     /* ==========================================================================
-       4. 발음 오디오 엔진 (Google TTS + Web Speech 안전 대체)
+       4. 발음 오디오 엔진
        ========================================================================== */
     let audioMode = 'khmer';
     let currentAudioObj = null;
@@ -821,7 +850,7 @@
       isAnswered = false;
       const targetWord = questionPool[currentIndex];
 
-      // 선지 엄격 분리: 성경 문제는 성경 어휘에서만, 일반 문제는 일반 어휘에서만 추출
+      // 선지 엄격 분리 (일반 vs 성경)
       const isBible = (currentMode === 'bible' || targetWord.id >= 1001);
       let candidatePool;
 
@@ -948,6 +977,7 @@
         card.classList.add('shake');
         setTimeout(() => card.classList.remove('shake'), 450);
 
+        // 5개 목숨 소진 시 게임 오버
         if (currentLives <= 0) {
           setTimeout(() => {
             document.getElementById('goScore').textContent = correctCount;
@@ -1077,8 +1107,8 @@
       document.getElementById('inspTotalCount').textContent = `${total}개 단어`;
       document.getElementById('inspGeneralCount').textContent = `${general}개 (동사/형용사/숫자)`;
       document.getElementById('inspBibleCount').textContent = `${bible}개 (성경 핵심 어휘)`;
-      document.getElementById('inspNumberStatus').textContent = `10단위 17개 완벽 등록됨`;
-      document.getElementById('inspDocxStatus').textContent = hasCustom ? "워드 파일 등록 완료 (보존 중)" : "내장 기본 데이터 구동 중";
+      document.getElementById('inspNumberStatus').textContent = `10단위 17개 완벽 등록됨 (10~1,000,000)`;
+      document.getElementById('inspDocxStatus').textContent = hasCustom ? "워드 파일 등록 완료 (영구 보존 중)" : "내장 기본 데이터 구동 중 (상단 📂 워드 등록 버튼으로 업로드 가능)";
       document.getElementById('inspAudioStatus').textContent = (audioCtx && audioCtx.state !== 'closed') ? "정상 활성화됨" : "대기 중 (클릭 시 자동 활성)";
 
       document.getElementById('inspectModal').classList.add('open');
@@ -1119,7 +1149,6 @@
             });
 
             if (parsedWords.length > 50) {
-              // 10단위 숫자 자동 병합
               NUMBER_WORDS.forEach(num => {
                 if (!parsedWords.some(w => w.khmer === num.khmer)) {
                   parsedWords.push(num);
@@ -1147,7 +1176,7 @@
     }
 
     /* ==========================================================================
-       7. 명예의 전당 & 대사전 검색
+       7. 명예의 전당 & 대사전 검색 (🌐 구글 실시간 검색 바로가기 완벽 탑재)
        ========================================================================== */
     function renderHallOfFame() {
       document.getElementById('hallBestRecord').textContent = `${userStats.bestCombo || 0}회`;
@@ -1168,10 +1197,11 @@
       });
     }
 
-    function renderVocabList(query = '') {
+    function renderVocabList(rawQuery = '') {
       const container = document.getElementById('vocabList');
       container.innerHTML = '';
-      const q = query.trim().toLowerCase();
+      const query = rawQuery.trim();
+      const q = query.toLowerCase();
 
       let filtered = ALL_WORDS_DATABASE;
       if (q) {
@@ -1182,8 +1212,22 @@
         filtered = ALL_WORDS_DATABASE.slice(0, 70);
       }
 
-      if (filtered.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:15px; color:#94a3b8;">검색 결과가 없습니다.</div>';
+      // ★ 내장 사전에 없는 단어를 검색했을 때: 구글 번역기 실시간 바로가기 카드 표시!
+      if (filtered.length === 0 && query) {
+        const isKhmer = /[\u1780-\u17FF]/.test(query);
+        const sl = isKhmer ? 'km' : 'ko';
+        const tl = isKhmer ? 'ko' : 'km';
+        const googleUrl = `https://translate.google.com/?sl=${sl}&tl=${tl}&text=${encodeURIComponent(query)}&op=translate`;
+
+        container.innerHTML = `
+          <div class="google-live-card">
+            <div style="font-size: 0.98rem; font-weight: 700; color: #fff;">내장 사전에 없는 단어입니다</div>
+            <div style="font-size: 0.82rem; color: #94a3b8;">구글 실시간 번역에서 바로 확인하고 발음을 들을 수 있습니다:</div>
+            <a href="${googleUrl}" target="_blank" class="btn-google-translate">
+              🌐 구글 번역기에서 "${query}" 실시간 검색하기 ➔
+            </a>
+          </div>
+        `;
         return;
       }
 
@@ -1210,6 +1254,20 @@
         `;
         container.appendChild(row);
       });
+
+      // 검색어가 있을 경우 리스트 맨 아래에도 구글 번역 추가 검색 링크 배치
+      if (query) {
+        const isKhmer = /[\u1780-\u17FF]/.test(query);
+        const googleUrl = `https://translate.google.com/?sl=${isKhmer ? 'km' : 'ko'}&tl=${isKhmer ? 'ko' : 'km'}&text=${encodeURIComponent(query)}&op=translate`;
+        const moreBox = document.createElement('div');
+        moreBox.style.cssText = "text-align: center; margin-top: 10px; padding: 10px;";
+        moreBox.innerHTML = `
+          <a href="${googleUrl}" target="_blank" style="color: var(--primary-light); font-size: 0.85rem; font-weight: 700; text-decoration: underline;">
+            🌐 찾으시는 뜻이 아닌가요? 구글 번역에서 "${query}" 더 찾아보기 ➔
+          </a>
+        `;
+        container.appendChild(moreBox);
+      }
     }
 
     function quickSearch(word) {
@@ -1232,7 +1290,7 @@
       document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
       document.body.addEventListener('click', unlockAudio, { once: true });
 
-      // 워드 파일 업로드 연동
+      // 📂 워드 파일 업로드 연동
       const fileInput = document.getElementById('wordFileInput');
       document.getElementById('btnUploadDocx').onclick = () => fileInput.click();
       fileInput.onchange = (e) => {
