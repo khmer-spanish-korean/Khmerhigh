@@ -8,8 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <!-- 워드 파일(.docx) 0.1초 고속 파싱 라이브러리 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -123,56 +121,6 @@
     .type-verb { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7; }
     .type-adj { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fde68a; }
     .type-bible { background: rgba(236, 72, 153, 0.2); border-color: #ec4899; color: #fbcfe8; }
-    
-    /* 구글 실시간 번역 연동 카드 스타일 */
-    .google-live-card {
-      background: rgba(79, 70, 229, 0.15);
-      border: 1px solid var(--primary-light);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      text-align: center;
-      margin-top: 6px;
-    }
-    .btn-google-translate {
-      background: var(--primary);
-      border: none;
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 4px;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
-    }
-    
-    /* 워드 파일 업로드 동기화 바 */
-    .doc-sync-box {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(79, 70, 229, 0.15));
-      border: 1px dashed var(--success);
-      border-radius: 10px;
-      padding: 10px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .btn-sync-doc {
-      background: var(--success);
-      color: #fff;
-      border: none;
-      padding: 7px 12px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 2px;
-    }
   </style>
 </head>
 <body>
@@ -300,7 +248,7 @@
     </div>
   </div>
 
-  <!-- 통합 사전 모달 (워드 2000단어 동기화 & 구글 번역 탑재) -->
+  <!-- 통합 사전 모달 -->
   <div class="modal-overlay" id="vocabModal">
     <div class="modal-box">
       <div class="modal-header">
@@ -308,17 +256,10 @@
         <button class="modal-close" id="btnCloseVocab">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- 워드 파일 1초 영구 등록 바 -->
-        <div class="doc-sync-box">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #fff;">📁 워드 파일(2,000단어) 자동 동기화</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">가지고 계신 docx 파일을 선택하면 2,000단어 전체가 즉시 저장됩니다.</div>
-          <input type="file" id="docxFileInput" accept=".docx" style="display: none;">
-          <button class="btn-sync-doc" onclick="document.getElementById('docxFileInput').click()">📂 워드 파일(.docx) 선택하여 2,000단어 등록하기</button>
-        </div>
-
-        <input type="text" class="vocab-search-input" id="vocabSearch" placeholder="하나님, 십자가, 밥, 가다, 먹다, 발음 검색...">
+        <input type="text" class="vocab-search-input" id="vocabSearch" placeholder="하나님, 십자가, 밥, 가다, 먹다, 숫자, 발음 검색...">
         <div class="search-tags-hint">
           <span>빠른 태그:</span>
+          <span class="hint-chip" onclick="quickSearch('숫자')">#숫자</span>
           <span class="hint-chip" onclick="quickSearch('성경')">#성경</span>
           <span class="hint-chip" onclick="quickSearch('예수')">#예수</span>
           <span class="hint-chip" onclick="quickSearch('동사')">#동사</span>
@@ -336,9 +277,10 @@
 
   <script>
     /* ==========================================================================
-       1. 원본 문서 기본 탑재 어휘 데이터 (동사·형용사·성경 순수 원형)
+       1. 원본 문서 단어 + 10단위 숫자 정밀 탑재 (순수 원형)
        ========================================================================== */
-    const BASE_DOC_WORDS = [
+    const RAW_DOC_WORDS = [
+      // [동사 1~100]
       { id: 1, khmer: "ជា", pron: "찌어", meaning: "~이다", type: "동사" },
       { id: 2, khmer: "មាន", pron: "미언", meaning: "있다, 가지다", type: "동사" },
       { id: 3, khmer: "នៅ", pron: "너으", meaning: "(어디에) 있다, 살다", type: "동사" },
@@ -392,7 +334,7 @@
       { id: 51, khmer: "ត្រឡប់", pron: "뜨럴럽", meaning: "돌아가다, 돌아오다", type: "동사" },
       { id: 52, khmer: "ដល់", pron: "덜", meaning: "도착하다, 이르다", type: "동사" },
       { id: 53, khmer: "ចាកចេញ", pron: "짝 쩬", meaning: "떠나다", type: "동사" },
-      { id: 54, khmer: "ធ្វើដំណើរ", pron: "트워 덤나으", meaning: "여행하다", type: "동사" },
+      { id: 54, khmer: "ធ្វើដំណើរ", pron: "트워 덤나으", meaning: "여행하다, 이동하다", type: "동사" },
       { id: 55, khmer: "ជិះ", pron: "찌", meaning: "(탈것을) 타다", type: "동사" },
       { id: 56, khmer: "បើកបរ", pron: "바윽 버", meaning: "운전하다", type: "동사" },
       { id: 57, khmer: "ចត", pron: "쩟", meaning: "주차하다, 세우다", type: "동사" },
@@ -406,8 +348,8 @@
       { id: 77, khmer: "តាម", pron: "땀", meaning: "따라가다", type: "동사" },
       { id: 84, khmer: "វង្វេង", pron: "웡웽", meaning: "길을 잃다", type: "동사" },
       { id: 85, khmer: "រក", pron: "록", meaning: "찾다", type: "동사" },
-      { id: 86, khmer: "រកឃើញ", pron: "록 컨", meaning: "찾아내다", type: "동사" },
-      { id: 87, khmer: "បាត់", pron: "밧", meaning: "잃어버리다", type: "동사" },
+      { id: 86, khmer: "រកឃើញ", pron: "록 컨", meaning: "찾아내다, 발견하다", type: "동사" },
+      { id: 87, khmer: "បាត់", pron: "밧", meaning: "잃어버리다, 사라지다", type: "동사" },
       { id: 89, khmer: "ដាក់", pron: "닥", meaning: "놓다, 넣다", type: "동사" },
       { id: 90, khmer: "លើក", pron: "럭", meaning: "들다, 올리다", type: "동사" },
       { id: 92, khmer: "បោះ", pron: "버", meaning: "던지다", type: "동사" },
@@ -415,18 +357,21 @@
       { id: 97, khmer: "ផ្ញើ", pron: "프냐으", meaning: "보내다", type: "동사" },
       { id: 98, khmer: "ទទួល", pron: "또뚜얼", meaning: "받다", type: "동사" },
       { id: 99, khmer: "ជួប", pron: "쭈업", meaning: "만나다", type: "동사" },
+
+      // [동사 101~300]
       { id: 101, khmer: "ប្រាប់", pron: "쁘랍", meaning: "말해 주다, 알리다", type: "동사" },
       { id: 104, khmer: "ហៅ", pron: "하으", meaning: "부르다", type: "동사" },
       { id: 107, khmer: "ពន្យល់", pron: "뽄욜", meaning: "설명하다", type: "동사" },
       { id: 109, khmer: "អាន", pron: "안", meaning: "읽다", type: "동사" },
       { id: 110, khmer: "សរសេរ", pron: "서세", meaning: "쓰다", type: "동사" },
-      { id: 113, khmer: "សុំទោស", pron: "솜 또", meaning: "사과하다", type: "동사" },
+      { id: 113, khmer: "សុំទោស", pron: "솜 또", meaning: "사과하다, 죄송하다", type: "동사" },
       { id: 114, khmer: "អរគុណ", pron: "어꾼", meaning: "감사하다", type: "동사" },
       { id: 117, khmer: "លា", pron: "리어", meaning: "작별하다", type: "동사" },
       { id: 119, khmer: "យល់ព្រម", pron: "율 쁘롬", meaning: "동의하다", type: "동사" },
       { id: 121, khmer: "សន្យា", pron: "선냐", meaning: "약속하다", type: "동사" },
+      { id: 122, khmer: "កុហក", pron: "꼬헉", meaning: "거짓말하다", type: "동사" },
       { id: 125, khmer: "សរសើរ", pron: "서사으", meaning: "칭찬하다", type: "동사" },
-      { id: 127, khmer: "បន្ទោស", pron: "번또", meaning: "꾸짖다", type: "동사" },
+      { id: 127, khmer: "បន្ទោស", pron: "번또", meaning: "탓하다, 꾸짖다", type: "동사" },
       { id: 129, khmer: "ឈ្លោះ", pron: "츨루어", meaning: "다투다", type: "동사" },
       { id: 135, khmer: "ទូរស័ព្ទ", pron: "뚜러삽", meaning: "전화하다", type: "동사" },
       { id: 141, khmer: "ច្រៀង", pron: "쯔리엉", meaning: "노래하다", type: "동사" },
@@ -436,16 +381,16 @@
       { id: 152, khmer: "ចាំ", pron: "짬", meaning: "기억하다", type: "동사" },
       { id: 153, khmer: "ភ្លេច", pron: "플렛", meaning: "잊다", type: "동사" },
       { id: 155, khmer: "ជឿ", pron: "쯔어", meaning: "믿다", type: "동사" },
-      { id: 157, khmer: "សង្ឃឹម", pron: "성컴", meaning: "희망하다", type: "동사" },
+      { id: 157, khmer: "សង្ឃឹម", pron: "성컴", meaning: "희망하다, 바라다", type: "동사" },
       { id: 158, khmer: "សម្រេចចិត្ត", pron: "섬랏 쩟", meaning: "결정하다", type: "동사" },
-      { id: 159, khmer: "ជ្រើសរើស", pron: "쯔러 러", meaning: "선택하다", type: "동사" },
-      { id: 165, khmer: "ស្អប់", pron: "스업", meaning: "미워하다", type: "동사" },
+      { id: 159, khmer: "ជ្រើសរើស", pron: "쯔러 러", meaning: "고르다, 선택하다", type: "동사" },
+      { id: 165, khmer: "ស្អប់", pron: "스업", meaning: "싫어하다, 미워하다", type: "동사" },
       { id: 166, khmer: "ខ្លាច", pron: "클랏", meaning: "무서워하다", type: "동사" },
       { id: 168, khmer: "បារម្ភ", pron: "바럼", meaning: "걱정하다", type: "동사" },
       { id: 169, khmer: "ខឹង", pron: "컹", meaning: "화내다", type: "동사" },
       { id: 173, khmer: "គោរព", pron: "꼬롭", meaning: "존경하다", type: "동사" },
       { id: 175, khmer: "អត់ទ្រាំ", pron: "엇 뜨로암", meaning: "참다, 견디다", type: "동사" },
-      { id: 176, khmer: "អត់ទោ스", pron: "엇 또", meaning: "용서하다", type: "동사" },
+      { id: 176, khmer: "អត់ទោស", pron: "엇 또", meaning: "용서하다", type: "동사" },
       { id: 204, khmer: "ភ្លក់", pron: "플루억", meaning: "맛보다", type: "동사" },
       { id: 211, khmer: "ដាំបាយ", pron: "담 바이", meaning: "밥을 짓다", type: "동사" },
       { id: 212, khmer: "ស្ងោរ", pron: "승아오", meaning: "삶다, 끓이다", type: "동사" },
@@ -456,7 +401,7 @@
       { id: 222, khmer: "ហាន់", pron: "한", meaning: "썰다", type: "동사" },
       { id: 226, khmer: "លាង", pron: "리엉", meaning: "씻다", type: "동사" },
       { id: 241, khmer: "កុម្ម៉ង់", pron: "꼼멍", meaning: "주문하다", type: "동사" },
-      { id: 242, khmer: "ខ្ចប់", pron: "크쩝", meaning: "포장하다", type: "동사" },
+      { id: 242, khmer: "ខ្ចប់", pron: "크쩝", meaning: "포장하다, 싸다", type: "동사" },
       { id: 243, khmer: "គិតលុយ", pron: "끗 루이", meaning: "계산하다", type: "동사" },
       { id: 251, khmer: "បើក", pron: "바윽", meaning: "열다, 켜다", type: "동사" },
       { id: 252, khmer: "បិទ", pron: "벗", meaning: "닫다, 끄다", type: "동사" },
@@ -466,22 +411,22 @@
       { id: 257, khmer: "ជូត", pron: "쭛", meaning: "닦다", type: "동사" },
       { id: 258, khmer: "លាងចាន", pron: "리엉 짠", meaning: "설거지하다", type: "동사" },
       { id: 259, khmer: "បោកខោអាវ", pron: "바옥 카오 아으", meaning: "빨래하다", type: "동사" },
-      { id: 265, khmer: "ងូតទឹក", pron: "응웃 뜩", meaning: "샤워하다", type: "동사" },
+      { id: 265, khmer: "ងូតទឹក", pron: "응웃 뜩", meaning: "샤워하다, 목욕하다", type: "동사" },
       { id: 267, khmer: "ដុសធ្មេញ", pron: "도 트멘", meaning: "이를 닦다", type: "동사" },
       { id: 268, khmer: "លុបមុខ", pron: "룹 묵", meaning: "세수하다", type: "동사" },
       { id: 269, khmer: "សិតសក់", pron: "섯 석", meaning: "머리를 빗다", type: "동사" },
       { id: 275, khmer: "ផ្លាស់ខោអាវ", pron: "플라 카오 아으", meaning: "옷을 갈아입다", type: "동사" },
       { id: 284, khmer: "សាកថ្ម", pron: "삭 트머", meaning: "충전하다", type: "동사" },
-      { id: 412, khmer: "ចុះថ្លៃ", pron: "쪼 틀라이", meaning: "값을 깎다", type: "동사" },
+      { id: 412, khmer: "ចុះថ្លៃ", pron: "쪼 틀라이", meaning: "값을 깎다, 할인하다", type: "동사" },
       { id: 439, khmer: "លួច", pron: "루엇", meaning: "훔치다", type: "동사" },
       { id: 480, khmer: "ឈ្នះ", pron: "츠네아", meaning: "이기다", type: "동사" },
       { id: 481, khmer: "ចាញ់", pron: "짠", meaning: "지다", type: "동사" },
       { id: 501, khmer: "ឈឺ", pron: "츠", meaning: "아프다", type: "동사" },
-      { id: 502, khmer: "ផ្ដាសាយ", pron: "프다사이", meaning: "감기 걸리다", type: "동사" },
+      { id: 502, khmer: "ផ្ដាសាយ", pron: "프다사이", meaning: "감기에 걸리다", type: "동사" },
       { id: 521, khmer: "ចាក់ថ្នាំ", pron: "짝 트남", meaning: "주사를 맞다", type: "동사" },
       { id: 522, khmer: "លេបថ្នាំ", pron: "렙 트남", meaning: "약을 먹다", type: "동사" },
 
-      // [형용사 601~1000]
+      // [형용사 601~980]
       { id: 601, khmer: "ធំ", pron: "톰", meaning: "크다", type: "형용사" },
       { id: 602, khmer: "តូច", pron: "똣", meaning: "작다", type: "형용사" },
       { id: 603, khmer: "វែង", pron: "왱", meaning: "길다", type: "형용사" },
@@ -504,33 +449,33 @@
       { id: 631, khmer: "យឺត", pron: "이읏", meaning: "느리다", type: "형용사" },
       { id: 632, khmer: "ខ្លាំង", pron: "클랑", meaning: "세다, 강하다", type: "형용사" },
       { id: 633, khmer: "ខ្សោយ", pron: "크사오이", meaning: "약하다", type: "형용사" },
-      { id: 634, khmer: "រឹង", pron: "릉", meaning: "딱딱하다", type: "형용사" },
+      { id: 634, khmer: "រឹង", pron: "릉", meaning: "딱딱하다, 단단하다", type: "형용사" },
       { id: 635, khmer: "ទន់", pron: "뚜언", meaning: "부드럽다", type: "형용사" },
       { id: 651, khmer: "ថ្មី", pron: "트마이", meaning: "새롭다", type: "형용사" },
-      { id: 652, khmer: "ចាស់", pron: "짜", meaning: "낡다, 오래되다", type: "형용사" },
+      { id: 652, khmer: "ចាស់", pron: "짜", meaning: "낡다, 늙다", type: "형용사" },
       { id: 653, khmer: "ស្អាត", pron: "스앗", meaning: "예쁘다, 깨끗하다", type: "형용사" },
       { id: 654, khmer: "កខ្វក់", pron: "꺼크웍", meaning: "더럽다", type: "형용사" },
-      { id: 658, khmer: "ក្ដៅ", pron: "끄다으", meaning: "덥다, 뜨겁다", type: "형용사" },
-      { id: 659, khmer: "ត្រជាក់", pron: "뜨러쩨악", meaning: "차갑다, 시원하다", type: "형용사" },
+      { id: 658, khmer: "ក្ដៅ", pron: "끄다으", meaning: "뜨겁다, 덥다", type: "형용사" },
+      { id: 659, khmer: "ត្រជាក់", pron: "뜨러쩨악", meaning: "차갑다, 춥다", type: "형용사" },
       { id: 660, khmer: "កក់ក្ដៅ", pron: "꺽 끄다으", meaning: "따뜻하다", type: "형용사" },
       { id: 661, khmer: "ភ្លឺ", pron: "플르", meaning: "밝다", type: "형용사" },
       { id: 662, khmer: "ងងឹត", pron: "응오응읏", meaning: "어둡다", type: "형용사" },
-      { id: 670, khmer: "ពិត", pron: "쁫", meaning: "진짜다", type: "형용사" },
+      { id: 670, khmer: "ពិត", pron: "쁫", meaning: "진짜다, 사실이다", type: "형용사" },
       { id: 673, khmer: "ពិសេស", pron: "삐사에", meaning: "특별하다", type: "형용사" },
-      { id: 678, khmer: "ទំនេរ", pron: "뚬네", meaning: "한가하다", type: "형용사" },
+      { id: 678, khmer: "ទំនេរ", pron: "뚬네", meaning: "한가하다, 비어 있다", type: "형용사" },
       { id: 679, khmer: "រវល់", pron: "로월", meaning: "바쁘다", type: "형용사" },
-      { id: 686, khmer: "ត្រឹមត្រូវ", pron: "뜨럼 뜨러으", meaning: "정확하다", type: "형용사" },
+      { id: 686, khmer: "ត្រឹមត្រូវ", pron: "뜨럼 뜨러으", meaning: "올바르다, 정확하다", type: "형용사" },
       { id: 687, khmer: "ខុស", pron: "코", meaning: "틀리다", type: "형용사" },
       { id: 695, khmer: "សំខាន់", pron: "섬칸", meaning: "중요하다", type: "형용사" },
-      { id: 701, khmer: "សប្បាយ", pron: "섭바이", meaning: "즐겁다", type: "형용사" },
+      { id: 701, khmer: "សប្បាយ", pron: "섭바이", meaning: "즐겁다, 신나다", type: "형용사" },
       { id: 706, khmer: "សោកសៅ", pron: "사옥 사으", meaning: "슬프다", type: "형용사" },
-      { id: 715, khmer: "អៀន", pron: "이언", meaning: "부끄럽다", type: "형용사" },
+      { id: 715, khmer: "អៀន", pron: "이언", meaning: "수줍다, 부끄럽다", type: "형용사" },
       { id: 732, khmer: "ហត់", pron: "헛", meaning: "피곤하다", type: "형용사" },
       { id: 735, khmer: "ឃ្លាន", pron: "클리언", meaning: "배고프다", type: "형용사" },
       { id: 736, khmer: "ស្រេកទឹក", pron: "스렉 뜩", meaning: "목마르다", type: "형용사" },
       { id: 737, khmer: "ឆ្អែត", pron: "츠아엣", meaning: "배부르다", type: "형용사" },
       { id: 751, khmer: "ចិត្តល្អ", pron: "쩟 르어", meaning: "착하다, 친절하다", type: "형용사" },
-      { id: 755, khmer: "ស្លូត", pron: "슬롯", meaning: "온순하다", type: "형용사" },
+      { id: 755, khmer: "ស្លូត", pron: "슬롯", meaning: "순하다, 온순하다", type: "형용사" },
       { id: 756, khmer: "កាច", pron: "깟", meaning: "사납다, 무섭다", type: "형용사" },
       { id: 757, khmer: "ស្មោះត្រង់", pron: "스머 뜨렁", meaning: "정직하다", type: "형용사" },
       { id: 758, khmer: "ឧស្សាហ៍", pron: "우사", meaning: "부지런하다", type: "형용사" },
@@ -550,6 +495,25 @@
       { id: 958, khmer: "ងាយស្រួល", pron: "응이어이 스루얼", meaning: "쉽다", type: "형용사" },
       { id: 961, khmer: "ថ្លៃ", pron: "틀라이", meaning: "비싸다", type: "형용사" },
       { id: 962, khmer: "ថោក", pron: "타옥", meaning: "싸다, 저렴하다", type: "형용사" },
+
+      // ★ [신규 정밀 추가: 10단위 숫자 어휘군 (일반 풀 ID: 981~997)]
+      { id: 981, khmer: "ដប់", pron: "덥", meaning: "10 (열 / 십)", type: "숫자" },
+      { id: 982, khmer: "ម្ភៃ", pron: "머파이", meaning: "20 (스물 / 이십)", type: "숫자" },
+      { id: 983, khmer: "សាមសិប", pron: "삼썹", meaning: "30 (서른 / 삼십)", type: "숫자" },
+      { id: 984, khmer: "សែសិប", pron: "싸에썹", meaning: "40 (마흔 / 사십)", type: "숫자" },
+      { id: 985, khmer: "ហាសិប", pron: "하썹", meaning: "50 (쉰 / 오십)", type: "숫자" },
+      { id: 986, khmer: "ហុកសិប", pron: "혹썹", meaning: "60 (예순 / 육십)", type: "숫자" },
+      { id: 987, khmer: "ចិតសិប", pron: "쩟썹", meaning: "70 (일흔 / 칠십)", type: "숫자" },
+      { id: 988, khmer: "ប៉ែតសិប", pron: "빠엣썹", meaning: "80 (여든 / 팔십)", type: "숫자" },
+      { id: 989, khmer: "កៅសិប", pron: "까우썹", meaning: "90 (아흔 / 구십)", type: "숫자" },
+      { id: 990, khmer: "មួយរយ", pron: "믕러이", meaning: "100 (백 / 일백)", type: "숫자" },
+      { id: 991, khmer: "ពីររយ", pron: "삐러이", meaning: "200 (이백)", type: "숫자" },
+      { id: 992, khmer: "បីរយ", pron: "바이러이", meaning: "300 (삼백)", type: "숫자" },
+      { id: 993, khmer: "ប្រាំរយ", pron: "쁘람러이", meaning: "500 (오백)", type: "숫자" },
+      { id: 994, khmer: "មួយពាន់", pron: "믕뽀안", meaning: "1,000 (천 / 일천)", type: "숫자" },
+      { id: 995, khmer: "មួយម៉ឺន", pron: "믕먼", meaning: "10,000 (만 / 일만)", type: "숫자" },
+      { id: 996, khmer: "មួយសែន", pron: "믕싸엔", meaning: "100,000 (십만)", type: "숫자" },
+      { id: 997, khmer: "មួយលាន", pron: "믕리언", meaning: "1,000,000 (백만)", type: "숫자" },
 
       // [성경 어휘 1001~2000]
       { id: 1001, khmer: "ព្រះ", pron: "쁘레아", meaning: "하나님, 신", type: "성경" },
@@ -578,7 +542,7 @@
       { id: 1085, khmer: "ព្រះលោហិត", pron: "쁘레아 로헛", meaning: "보혈, 피", type: "성경" },
       { id: 1095, khmer: "បល្ល័ង្ក", pron: "벌랑", meaning: "보좌, 왕좌", type: "성경" },
       { id: 1096, khmer: "មកុដ", pron: "모꼿", meaning: "면류관, 왕관", type: "성경" },
-      { id: 1101, khmer: "ដំណឹងល្អ", pron: "덤넝 르어", meaning: "복음", type: "성경" },
+      { id: 1101, khmer: "ដំណឹងល្អ", pron: "덤넝 르어", meaning: "복음, 기쁜 소식", type: "성경" },
       { id: 1102, khmer: "សេចក្ដីសង្គ្រោះ", pron: "섯 끄다이 성끄루어", meaning: "구원", type: "성경" },
       { id: 1104, khmer: "សេចក្ដីជំនឿ", pron: "섯 끄다이 쭘느어", meaning: "믿음", type: "성경" },
       { id: 1106, khmer: "សេចក្ដីស្រឡាញ់", pron: "섯 끄다이 스럴란", meaning: "사랑", type: "성경" },
@@ -634,17 +598,8 @@
       { id: 2000, khmer: "សូមព្រះប្រទានពរ", pron: "솜 쁘레아 쁘러띠언 뽀", meaning: "하나님께서 복 주시기를", type: "성경" }
     ];
 
-    // 저장소에 사용자가 등록한 2,000단어가 있으면 최우선 로드, 없으면 기본 배열 사용
-    let ALL_WORDS = BASE_DOC_WORDS;
-    try {
-      const savedCustomWords = localStorage.getItem('khmer_custom_2000_words');
-      if (savedCustomWords) {
-        ALL_WORDS = JSON.parse(savedCustomWords);
-      }
-    } catch(e) {}
-
     /* ==========================================================================
-       ★ 순수 원형 1,000문제 회전 생성기 (수식어 없이 원형 그대로 채움)
+       ★ 인위적 접두사 삭제: 순수 원형 1,000문제 완전 비중복 생성 풀
        ========================================================================== */
     function buildCleanSessionPool(baseList, targetLength = 1000) {
       const pool = [];
@@ -665,16 +620,13 @@
       return pool;
     }
 
-    let GENERAL_POOL_1000 = [];
-    let BIBLE_POOL_1000 = [];
+    const GENERAL_BASE = RAW_DOC_WORDS.filter(w => w.id <= 1000);
+    const BIBLE_BASE = RAW_DOC_WORDS.filter(w => w.id >= 1001);
 
-    function rebuildPools() {
-      const generalBase = ALL_WORDS.filter(w => w.id <= 1000);
-      const bibleBase = ALL_WORDS.filter(w => w.id >= 1001);
-      GENERAL_POOL_1000 = buildCleanSessionPool(generalBase.length > 0 ? generalBase : ALL_WORDS, 1000);
-      BIBLE_POOL_1000 = buildCleanSessionPool(bibleBase.length > 0 ? bibleBase : ALL_WORDS, 1000);
-    }
-    rebuildPools();
+    const GENERAL_POOL_1000 = buildCleanSessionPool(GENERAL_BASE, 1000);
+    const BIBLE_POOL_1000 = buildCleanSessionPool(BIBLE_BASE, 1000);
+
+    const MASTER_DICTIONARY = RAW_DOC_WORDS;
 
     /* ==========================================================================
        2. Web Audio API 사운드 (iOS Safari 완전 호환)
@@ -757,7 +709,7 @@
     }
 
     /* ==========================================================================
-       3. 캔버스 폭죽(콘페티)
+       3. 캔버스 폭죽
        ========================================================================== */
     const canvas = document.getElementById('confettiCanvas');
     const ctx = canvas.getContext('2d');
@@ -791,8 +743,10 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = confettiParticles.length - 1; i >= 0; i--) {
         const p = confettiParticles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += 0.38; p.vx *= 0.98;
-        p.rotation += p.rotSpeed; p.opacity -= p.decay;
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.38; p.vx *= 0.98;
+        p.rotation += p.rotSpeed;
+        p.opacity -= p.decay;
         if (p.opacity <= 0 || p.y > canvas.height) { confettiParticles.splice(i, 1); continue; }
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.opacity);
@@ -807,7 +761,7 @@
     }
 
     /* ==========================================================================
-       4. 발음 오디오 엔진 (Google TTS + Web Speech)
+       4. 발음 오디오 엔진 (Google TTS + Web Speech 안전 대체)
        ========================================================================== */
     let audioMode = 'khmer';
     let currentAudioObj = null;
@@ -884,7 +838,7 @@
     }
 
     /* ==========================================================================
-       5. 퀴즈 엔진 & 선지 분리 & 목숨 5개
+       5. 퀴즈 엔진 & 명예의 전당 칭호 (20~1000 연속 티어)
        ========================================================================== */
     const MAX_LIVES = 5;
     let currentLives = 5;
@@ -910,8 +864,8 @@
       { id: 'streak_300', icon: '👑', title: '크메르 지존', desc: '300개 연속 정답 달성' },
       { id: 'streak_500', icon: '📜', title: '캄보디아 영주권자', desc: '500개 연속 정답 달성' },
       { id: 'streak_1000', icon: '🇰🇭', title: '캄보디아인', desc: '1000개 연속 정답 달성' },
-      { id: 'acc_almost', icon: '🏹', title: '거의 백발백중', desc: '20문제 이상 & 정답률 90% 이상' },
-      { id: 'acc_master', icon: '🎯', title: '전설의 백발백중', desc: '100문제 이상 & 정답률 90% 이상' }
+      { id: 'acc_almost', icon: '🏹', title: '거의 백발백중', desc: '20문제 이상 풀이 & 정답률 90% 이상' },
+      { id: 'acc_master', icon: '🎯', title: '전설의 백발백중', desc: '100문제 이상 풀이 & 정답률 90% 이상' }
     ];
 
     function updateLivesUI() {
@@ -986,17 +940,15 @@
       isAnswered = false;
       const targetWord = questionPool[currentIndex];
 
-      // ★ 오답 선지 엄격 분리: 성경 문제는 성경 어휘에서만, 일반 문제는 일반 어휘에서만 추출!
+      // 선지 엄격 분리: 성경 문제는 성경 어휘에서만, 일반 문제는 일반 어휘에서만 추출!
       const isBible = (currentMode === 'bible' || targetWord.id >= 1001);
-      const generalBase = ALL_WORDS.filter(w => w.id <= 1000);
-      const bibleBase = ALL_WORDS.filter(w => w.id >= 1001);
       let candidatePool;
 
       if (isBible) {
-        candidatePool = bibleBase.filter(w => w.meaning !== targetWord.meaning);
+        candidatePool = BIBLE_BASE.filter(w => w.meaning !== targetWord.meaning);
       } else {
-        const generalSameType = generalBase.filter(w => w.type === targetWord.type && w.meaning !== targetWord.meaning);
-        candidatePool = (generalSameType.length >= 3) ? generalSameType : generalBase.filter(w => w.meaning !== targetWord.meaning);
+        const generalSameType = GENERAL_BASE.filter(w => w.type === targetWord.type && w.meaning !== targetWord.meaning);
+        candidatePool = (generalSameType.length >= 3) ? generalSameType : GENERAL_BASE.filter(w => w.meaning !== targetWord.meaning);
       }
 
       const chosenDistractors = shuffle(candidatePool).slice(0, 3);
@@ -1233,7 +1185,7 @@
     }
 
     /* ==========================================================================
-       6. 명예의 전당 & 대사전 검색 (구글 실시간 번역 연동 복구 완료)
+       6. 명예의 전당 & 대사전 검색
        ========================================================================== */
     function renderHallOfFame() {
       document.getElementById('hallBestRecord').textContent = `${userStats.bestCombo || 0}회`;
@@ -1259,31 +1211,17 @@
       container.innerHTML = '';
       const q = query.trim().toLowerCase();
 
-      let filtered = ALL_WORDS;
+      let filtered = RAW_DOC_WORDS;
       if (q) {
-        filtered = ALL_WORDS.filter(w => 
+        filtered = RAW_DOC_WORDS.filter(w => 
           w.khmer.includes(q) || w.pron.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q) || w.type.toLowerCase().includes(q)
         );
       } else {
-        filtered = ALL_WORDS.slice(0, 60);
+        filtered = RAW_DOC_WORDS.slice(0, 60);
       }
 
-      // ★ 구글 실시간 번역 연동 복구: 단어가 없을 때 구글 번역 카드 출력
       if (filtered.length === 0) {
-        const isKhmer = /[\u1780-\u17FF]/.test(query);
-        const sl = isKhmer ? 'km' : 'ko';
-        const tl = isKhmer ? 'ko' : 'km';
-        const googleUrl = `https://translate.google.com/?sl=${sl}&tl=${tl}&text=${encodeURIComponent(query)}&op=translate`;
-
-        container.innerHTML = `
-          <div class="google-live-card">
-            <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">📖 내장 사전에 없는 단어입니다</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 10px 0;">구글 번역기에서 실시간으로 뜻을 바로 확인하세요:</div>
-            <button class="btn-google-translate" onclick="window.open('${googleUrl}', '_blank', 'noopener,noreferrer')">
-              🌐 구글 번역기로 "${query}" 검색하기 ➔
-            </button>
-          </div>
-        `;
+        container.innerHTML = '<div style="text-align:center; padding:15px; color:#94a3b8;">검색 결과가 없습니다.</div>';
         return;
       }
 
@@ -1319,74 +1257,16 @@
     }
 
     /* ==========================================================================
-       ★ 워드 파일(.docx) 선택 시 2,000단어 0.1초 고속 자동 추출 및 영구 저장
-       ========================================================================== */
-    function handleDocxUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      showToast("⏳ 2,000단어 분석 중...");
-      const reader = new FileReader();
-      reader.onload = function(loadEvent) {
-        const arrayBuffer = loadEvent.target.result;
-        mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
-          .then(result => {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = result.value;
-            const trs = tempDiv.querySelectorAll('tr');
-            const parsed = [];
-
-            trs.forEach(tr => {
-              const cells = Array.from(tr.querySelectorAll('td, th')).map(c => c.textContent.trim());
-              if (cells.length >= 4) {
-                const id = parseInt(cells[0]);
-                if (!isNaN(id) && id >= 1 && id <= 2000) {
-                  let type = "동사";
-                  if (id >= 601 && id <= 1000) type = "형용사";
-                  else if (id >= 1001) type = "성경";
-                  parsed.push({
-                    id: id,
-                    khmer: cells[1],
-                    pron: cells[2],
-                    meaning: cells[3],
-                    type: type
-                  });
-                }
-              }
-            });
-
-            if (parsed.length >= 500) {
-              ALL_WORDS = parsed;
-              localStorage.setItem('khmer_custom_2000_words', JSON.stringify(parsed));
-              document.getElementById('totalDictCount').textContent = ALL_WORDS.length;
-              rebuildPools();
-              initQuizPool();
-              renderVocabList();
-              showToast(`🎉 2,000단어 동기화 완료! (총 ${ALL_WORDS.length}단어 영구 등록)`);
-            } else {
-              alert("단어 형식을 인식하지 못했습니다. 원본 워드 파일(.docx)인지 확인해주세요.");
-            }
-          })
-          .catch(err => {
-            alert("파일 분석 중 오류가 발생했습니다: " + err.message);
-          });
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    /* ==========================================================================
        7. 초기화 및 리스너
        ========================================================================== */
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('totalDictCount').textContent = ALL_WORDS.length;
+      document.getElementById('totalDictCount').textContent = RAW_DOC_WORDS.length;
       loadSavedData();
       updateLivesUI();
       initQuizPool();
 
       document.body.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
       document.body.addEventListener('click', unlockAudio, { once: true });
-
-      document.getElementById('docxFileInput').addEventListener('change', handleDocxUpload);
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = () => setMode(btn.dataset.mode);
